@@ -11,12 +11,15 @@
 #include "odx_frontend_list.h"
 
 #define SCREEN_WIDTH 320
-#define SCREEN_HEIGHT 240
+#define SCREEN_HEIGHT 480
 #define BMP_SIZE ((SCREEN_WIDTH*SCREEN_HEIGHT)+(256*4)+54)
+
+#define Y_BOTTOM_LINE	460
+#define X_BUILD		(SCREEN_WIDTH - ((10 * 6)+2))
 
 #define COMPATCORES 1
 
-char build_version[] = "GCW0 V1.2";
+char build_version[] = "RS-97 V1.2";
 
 static unsigned char splash_bmp[BMP_SIZE];
 static unsigned char menu_bmp[BMP_SIZE];
@@ -68,18 +71,20 @@ static void odx_intro_screen(void) {
 	sprintf(name,"skins/splash.bmp");
 	f=fopen(name,"rb");
 	if (f) {
-		fread(splash_bmp,1,77878,f);
+		fread(splash_bmp,1,BMP_SIZE,f);
 		fclose(f);
 	}
 	blit_bmp_8bpp(od_screen8,splash_bmp);
-	odx_gamelist_text_out(1,230,build_version);
+	odx_gamelist_text_out(1,ODX_SCREEN_HEIGHT - 16, build_version);
+	odx_gamelist_text_out(ODX_SCREEN_WIDTH - (10 * 8),ODX_SCREEN_HEIGHT - 16, "bob_fossil");
+
 	odx_video_flip();
 	odx_joystick_press();
 	
 	sprintf(name,"skins/menu.bmp");
 	f=fopen(name,"rb");
 	if (f) {
-		fread(menu_bmp,1,77878,f);
+		fread(menu_bmp,1,BMP_SIZE,f);
 		fclose(f);
 	}
 }
@@ -172,17 +177,17 @@ static void game_list_view(int *pos) {
 	int i;
 	int view_pos;
 	int aux_pos=0;
-	int screen_y = 45;
+	int screen_y = 90;
 	int screen_x = 38;
 
 	/* Draw background image */
 	blit_bmp_8bpp(od_screen8,menu_bmp);
 
 	/* draw text */
-	odx_gamelist_text_out( 4, 30,"Select ROM");
-	odx_gamelist_text_out( 4, 230,"A=Select Game/Start  B=Back");
-	odx_gamelist_text_out( 268, 230,"L+R=Exit");
-	odx_gamelist_text_out( 264,2,build_version);
+	odx_gamelist_text_out( 4, 60,"Select ROM");
+	odx_gamelist_text_out( 4, Y_BOTTOM_LINE,"A=Select Game/Start  B=Back");
+	odx_gamelist_text_out( 268, Y_BOTTOM_LINE,"L+R=Exit");
+	odx_gamelist_text_out( X_BUILD,2,build_version);
 
 	/* Check Limits */
 	if (*pos<0)
@@ -211,7 +216,7 @@ static void game_list_view(int *pos) {
 					odx_gamelist_text_out( screen_x-10, screen_y,">" );
 					odx_gamelist_text_out( screen_x-13, screen_y-1,"-" );
 				}
-				screen_y+=8;
+				screen_y+=16;
 			}
 			aux_pos++;
 		}
@@ -256,7 +261,7 @@ static int show_options(char *game)
 	unsigned long ExKey=0;
 	int selected_option=0;
 	int x_Pos = 41;
-	int y_PosTop = 58;
+	int y_PosTop = 116;
 	int y_Pos = y_PosTop;
 	int options_count = 9;
 	char text[512];
@@ -280,18 +285,18 @@ static int show_options(char *game)
 		blit_bmp_8bpp(od_screen8,menu_bmp);
 
 		/* draw text */
-		odx_gamelist_text_out( 4, 30,"Game Options");
-		odx_gamelist_text_out( 4, 230,"A=Select Game/Start  B=Back");
-		odx_gamelist_text_out( 268, 230,"L+R=Exit");
-		odx_gamelist_text_out( 264,2,build_version);
+		odx_gamelist_text_out( 4, 60,"Game Options");
+		odx_gamelist_text_out( 4, Y_BOTTOM_LINE,"A=Select Game/Start  B=Back");
+		odx_gamelist_text_out( 268, Y_BOTTOM_LINE,"L+R=Exit");
+		odx_gamelist_text_out( X_BUILD,2,build_version);
 
 		/* Draw the options */
 		strncpy (text,game_list_description(last_game_selected),33);
 		text[32]='\0';
-		odx_gamelist_text_out(x_Pos,y_Pos-10,text);
+		odx_gamelist_text_out(x_Pos,y_Pos-20,text);
 
 		/* (0) Video Depth */
-		y_Pos += 10;
+		y_Pos += 20;
 		switch (odx_video_depth)
 		{
 			case -1: odx_gamelist_text_out_fmt(x_Pos,y_Pos,"Video Depth    Auto"); break;
@@ -300,7 +305,7 @@ static int show_options(char *game)
 		}
 		
 		/* (1) Video Aspect */
-		y_Pos += 10;
+		y_Pos += 20;
 		switch (odx_video_aspect)
 		{
 			case 0: odx_gamelist_text_out_fmt(x_Pos,y_Pos,"Video Aspect   Normal"); break;
@@ -313,10 +318,11 @@ static int show_options(char *game)
 			case 7: odx_gamelist_text_out_fmt(x_Pos,y_Pos,"Video Aspect   Rotate Best"); break;
 			case 8: odx_gamelist_text_out_fmt(x_Pos,y_Pos,"Video Aspect   Rotate Fast"); break;
 			case 9: odx_gamelist_text_out_fmt(x_Pos,y_Pos,"Video Aspect   Rotate Halfsize"); break;
+			case 10: odx_gamelist_text_out_fmt(x_Pos,y_Pos,"Video Aspect   Double Vertical"); break;			
 		}
 		
 		/* (2) Video Sync */
-		y_Pos += 10;
+		y_Pos += 20;
 		switch (odx_video_sync)
 		{
 			case 1: odx_gamelist_text_out(x_Pos,y_Pos, "Video Sync     VSync"); break;
@@ -326,7 +332,7 @@ static int show_options(char *game)
 		}
 		
 		/* (3) Frame-Skip */
-		y_Pos += 10;
+		y_Pos += 20;
 		if ((odx_video_sync==-1) && (odx_frameskip==-1)) odx_frameskip=0;
 		if(odx_frameskip==-1) {
 			odx_gamelist_text_out_fmt(x_Pos,y_Pos, "Frame-Skip     Auto");
@@ -336,7 +342,7 @@ static int show_options(char *game)
 		}
 
 		/* (4) Sound */
-		y_Pos += 10;
+		y_Pos += 20;
 		switch(odx_sound)
 		{
 			case 0: odx_gamelist_text_out_fmt(x_Pos,y_Pos,"Sound          %s","OFF"); break;
@@ -358,15 +364,15 @@ static int show_options(char *game)
 		}
 
 		/* (5) CPU Clock */
-		y_Pos += 10;
+		y_Pos += 20;
 		odx_gamelist_text_out_fmt(x_Pos,y_Pos,"CPU Clock      %d%%",odx_clock_cpu);
 
 		/* (6) Audio Clock */
-		y_Pos += 10;
+		y_Pos += 20;
 		odx_gamelist_text_out_fmt(x_Pos,y_Pos,"Audio Clock    %d%%",odx_clock_sound);
 
 		/* (7) CPU cores */
-		y_Pos += 10;
+		y_Pos += 20;
 		switch (odx_cpu_cores)
 		{
 			case 0: odx_gamelist_text_out(x_Pos,y_Pos, "CPU FAST cores None"); break;
@@ -375,7 +381,7 @@ static int show_options(char *game)
 		}
 
 		/* (8) Cheats */
-		y_Pos += 10;
+		y_Pos += 20;
 		if (odx_cheat)
 			odx_gamelist_text_out(x_Pos,y_Pos,"Cheats         ON");
 		else
@@ -385,7 +391,7 @@ static int show_options(char *game)
 		//odx_gamelist_text_out(x_Pos,y_Pos,"Press B to confirm, X to return\0");
 
 		/* Show currently selected item */
-		odx_gamelist_text_out(x_Pos-16,y_PosTop+(selected_option*10)+10," >");
+		odx_gamelist_text_out(x_Pos-16,y_PosTop+(selected_option*20)+20," >");
 
 		odx_video_flip(); 
 		while (odx_joystick_read()) { odx_timer_delay(100); }
@@ -414,14 +420,14 @@ static int show_options(char *game)
 				if(ExKey & OD_RIGHT)
 				{
 					odx_video_aspect++;
-					if (odx_video_aspect>9)
+					if (odx_video_aspect>10)
 						odx_video_aspect=0;
 				}
 				else
 				{
 					odx_video_aspect--;
 					if (odx_video_aspect<0)
-						odx_video_aspect=9;
+						odx_video_aspect=10;
 				}
 				break;
 			case 2:
@@ -653,6 +659,11 @@ void execute_game (char *playemu, char *playgame)
 		args[n]="-rotatecontrols"; n++;
 		args[n]="-ror"; n++;
 	}
+	if (odx_video_aspect==10)
+	{
+		args[n]="-double"; n++;
+		args[n]="-nodirty"; n++;
+	}
 	
 	/* odx_video_sync */
 	if (odx_video_sync==1)
@@ -882,11 +893,11 @@ signed int get_romdir(char *result) {
 		while(repeat) {
 			blit_bmp_8bpp(od_screen8,menu_bmp);
 			
-			odx_gamelist_text_out( 182, 30,"Select a ROM directory");
-			odx_gamelist_text_out( 4, 215,current_dir_short );
-			odx_gamelist_text_out( 4, 230,"A=Enter dir START=Select dir");
-			odx_gamelist_text_out( 280, 230,"B=Quit");
-			odx_gamelist_text_out( 264,2,build_version);
+			odx_gamelist_text_out( 182, 60,"Select a ROM directory");
+			odx_gamelist_text_out( 4, 430,current_dir_short );
+			odx_gamelist_text_out( 4, Y_BOTTOM_LINE,"A=Enter dir START=Select dir");
+			odx_gamelist_text_out( 280, Y_BOTTOM_LINE,"B=Quit");
+			odx_gamelist_text_out( X_BUILD,2,build_version);
 			
 			for(i = 0, current_filedir_number = i + current_filedir_scroll_value; i < FILE_LIST_ROWS; i++, current_filedir_number++) {
 #define CHARLEN ((320/6)-2)
@@ -896,7 +907,7 @@ signed int get_romdir(char *result) {
 					if((current_filedir_number == current_filedir_selection))
 						print_buffer[0] = '>';
 					print_buffer[CHARLEN] = 0;
-					odx_gamelist_text_out(4, 31+((i + 2) * 8), print_buffer );
+					odx_gamelist_text_out(4, 62+((i + 2) * 16), print_buffer );
 				}
 			}
 			odx_video_flip();
@@ -1013,7 +1024,8 @@ int main (int argc, char **argv)
 	odx_init(1000,16,44100,16,0,60);
 
 	/* Show intro screen */
-	odx_intro_screen();
+	if (argc==1)
+		odx_intro_screen();
 
 	/* Read default configuration */
 	odx_load_config();
@@ -1027,8 +1039,8 @@ int main (int argc, char **argv)
 		
 		/* Check for rom dir */
 		while (game_num_avail == 0) {
-			odx_gamelist_text_out(10, 20, "Error: No available games found !");
-			odx_gamelist_text_out(10, 40, "Press a key to select a rom directory");
+			odx_gamelist_text_out(10, 40, "Error: No available games found !");
+			odx_gamelist_text_out(10, 80, "Press a key to select a rom directory");
 			odx_video_flip();
 			odx_joystick_press();
 			if (get_romdir(romdir) == -1) {

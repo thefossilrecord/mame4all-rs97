@@ -132,14 +132,39 @@ INLINE void blitscreen_dirty0_color8_noscale(struct osd_bitmap *bitmap)
 	int columns=gfx_display_columns;
 	unsigned char *lb = bitmap->line[skiplines] + skipcolumns;
 	register unsigned short *address = SCREEN8 + gfx_xoffset + (gfx_yoffset * gfx_width);
-	
-    do
+
+	do
 	//for (y = 0; y < gfx_display_lines; y++)
 	{
 		BLIT_8_TO_16_32bit(address,lb,columns);
 		//memcpy(address,lb,columns);
 		lb+=width;
 		address+=gfx_width;
+		y--;
+	}
+	while (y);
+	//FLIP_VIDEO
+}
+
+INLINE void blitscreen_dirty0_color8_doublevertical(struct osd_bitmap *bitmap)
+//void blitscreen_dirty0_color8(struct osd_bitmap *bitmap)
+{
+	int y=gfx_display_lines;
+	//int y;
+	int width=(bitmap->line[1] - bitmap->line[0]);
+	int columns=gfx_display_columns;
+	unsigned char *lb = bitmap->line[skiplines] + skipcolumns;
+	register unsigned short *address = SCREEN8 + gfx_xoffset + (gfx_yoffset * gfx_width);
+	
+    do
+	//for (y = 0; y < gfx_display_lines; y++)
+	{
+		BLIT_8_TO_16_32bit(address,lb,columns);
+		//memcpy(address,lb,columns);
+		address+=gfx_width;
+		BLIT_8_TO_16_32bit(address,lb,columns);
+		address+=gfx_width;
+		lb+=width;
 		y--;
 	}
 	while (y);
@@ -346,6 +371,10 @@ void blitscreen_dirty0_color8(struct osd_bitmap *bitmap)
 	{
 		blitscreen_dirty0_color8_fitscale_merge0(bitmap);
 	}
+	else if (video_scale == 5) /* Double Vertical */
+	{
+		blitscreen_dirty0_color8_doublevertical(bitmap);
+	}
 	else /* Default is normal blit with no scaling */
 	{
 		blitscreen_dirty0_color8_noscale(bitmap);
@@ -410,6 +439,31 @@ INLINE void blitscreen_dirty0_palettized16_noscale(struct osd_bitmap *bitmap)
 
 	for (y = 0; y < gfx_display_lines; y++)
 	{
+		for (x = 0; x < columns; x++)
+		{
+			address[x] = palette_16bit_lookup[lb[x]];
+		}
+		lb+=width;
+		address+=gfx_width;
+	}
+}
+
+INLINE void blitscreen_dirty0_palettized16_doublevertical(struct osd_bitmap *bitmap)
+//void blitscreen_dirty0_palettized16(struct osd_bitmap *bitmap)
+{
+	int x,y;
+	int width=(bitmap->line[1] - bitmap->line[0])>>1;
+	int columns=gfx_display_columns;
+	unsigned short *lb = ((unsigned short*)(bitmap->line[skiplines])) + skipcolumns;
+	register unsigned short *address = SCREEN16 + gfx_xoffset + (gfx_yoffset * gfx_width);
+
+	for (y = 0; y < gfx_display_lines; y++)
+	{
+		for (x = 0; x < columns; x++)
+		{
+			address[x] = palette_16bit_lookup[lb[x]];
+		}
+		address+=gfx_width;
 		for (x = 0; x < columns; x++)
 		{
 			address[x] = palette_16bit_lookup[lb[x]];
@@ -616,6 +670,10 @@ void blitscreen_dirty0_palettized16(struct osd_bitmap *bitmap)
 	{
 		blitscreen_dirty0_palettized16_fitscale_merge0(bitmap);
 	}
+	else if(video_scale == 5) /* Double Vertical */
+	{
+		blitscreen_dirty0_palettized16_doublevertical(bitmap);
+	}
 	else
 	{
 		blitscreen_dirty0_palettized16_noscale(bitmap);
@@ -672,6 +730,28 @@ INLINE void blitscreen_dirty0_color16_noscale(struct osd_bitmap *bitmap)
 
 	do
 	{
+	    memcpy(address,lb,columns);
+		lb+=width;
+		address+=gfx_width;
+		y--;
+	}
+	while (y);
+	//FLIP_VIDEO
+}
+
+INLINE void blitscreen_dirty0_color16_doublevertical(struct osd_bitmap *bitmap)
+//void blitscreen_dirty0_color16(struct osd_bitmap *bitmap)
+{
+	int y=gfx_display_lines,x;
+	int width=(bitmap->line[1] - bitmap->line[0])>>1;
+	int columns=gfx_display_columns<<1;
+	unsigned short *lb = ((unsigned short*)(bitmap->line[skiplines])) + skipcolumns;
+	register unsigned short *address = SCREEN16 + gfx_xoffset + (gfx_yoffset * gfx_width);
+
+	do
+	{
+	    memcpy(address,lb,columns);
+		address+=gfx_width;
 	    memcpy(address,lb,columns);
 		lb+=width;
 		address+=gfx_width;
@@ -877,6 +957,10 @@ void blitscreen_dirty0_color16(struct osd_bitmap *bitmap)
 	else if (video_scale == 4) /* Fast Fit Scale */
 	{
 		blitscreen_dirty0_color16_fitscale_merge0(bitmap);
+	}
+	else if (video_scale == 5) /* Double Vertical */
+	{
+		blitscreen_dirty0_color16_doublevertical(bitmap);
 	}
 	else
 	{

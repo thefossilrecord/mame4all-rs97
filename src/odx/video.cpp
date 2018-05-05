@@ -358,6 +358,7 @@ void osd_set_visible_area(int min_x,int max_x,int min_y,int max_y)
 {
 
 logerror("set visible area %d-%d %d-%d\n",min_x,max_x,min_y,max_y);
+logerror("video_scale %d\n",video_scale);
 
 	viswidth  = max_x - min_x + 1;
 	visheight = max_y - min_y + 1;
@@ -366,34 +367,55 @@ logerror("set visible area %d-%d %d-%d\n",min_x,max_x,min_y,max_y);
 	xmultiply = 1;
 	ymultiply = 1;
 
-	if (video_scale == 2)
-	{
-		gfx_display_lines = visheight;
-		gfx_display_columns = viswidth;
-		gfx_xoffset = ((gfx_width<<1) - viswidth * xmultiply) / 2;
-		gfx_yoffset = ((gfx_height<<1) - visheight * ymultiply) / 2;
-	}
-	else if (video_scale == 3 || video_scale == 4)
-	{
-		gfx_display_lines = visheight;
-		gfx_display_columns = viswidth;
+	switch(video_scale)
+		{
+		case 2:		// halfscale
+			{
+			gfx_display_lines = visheight;
+			gfx_display_columns = viswidth;
+			gfx_xoffset = ((gfx_width<<1) - viswidth * xmultiply) / 2;
+			gfx_yoffset = ((gfx_height<<1) - visheight * ymultiply) / 2;
+			}
+			break;
 
-		gfx_xoffset = (gfx_width - scaled_display_columns * xmultiply) / 2;
-		gfx_yoffset = (gfx_height - scaled_display_lines * ymultiply) / 2;
-	}
-	else
-	{
-		gfx_display_lines = visheight;
-		gfx_display_columns = viswidth;
+		case 3:		// bestscale
+		case 4:		// fastscale
+			{
+			gfx_display_lines = visheight;
+			gfx_display_columns = viswidth;
 
-		gfx_xoffset = (gfx_width - viswidth * xmultiply) / 2;
-		if (gfx_display_columns > gfx_width / xmultiply)
-			gfx_display_columns = gfx_width / xmultiply;
+			gfx_xoffset = (gfx_width - scaled_display_columns * xmultiply) / 2;
+			gfx_yoffset = (gfx_height - scaled_display_lines * ymultiply) / 2;
+			}
+			break;
 
-		gfx_yoffset = (gfx_height - visheight * ymultiply) / 2;
+		case 5:		// double
+			{
+			if(visheight * 2 > gfx_height)
+				visheight = gfx_height / 2;
+
+			gfx_display_lines = visheight;
+			gfx_display_columns = viswidth;
+
+			gfx_xoffset = (gfx_width - viswidth * xmultiply) / 2;
+			gfx_yoffset = (gfx_height - (visheight << 1) * ymultiply) / 2;
+			}
+			break;
+
+		default:	// horizscale
+			{
+			gfx_display_lines = visheight;
+			gfx_display_columns = viswidth;
+
+			gfx_xoffset = (gfx_width - viswidth * xmultiply) / 2;
+			if (gfx_display_columns > gfx_width / xmultiply)
+				gfx_display_columns = gfx_width / xmultiply;
+
+			gfx_yoffset = (gfx_height - visheight * ymultiply) / 2;
 			if (gfx_display_lines > gfx_height / ymultiply)
 				gfx_display_lines = gfx_height / ymultiply;
-	}
+			}
+		}
 
 	skiplinesmin = min_y;
 	skiplinesmax = visheight - gfx_display_lines + min_y;

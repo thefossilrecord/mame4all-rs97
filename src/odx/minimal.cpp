@@ -36,7 +36,7 @@ unsigned short			odx_palette_rgb[256];
 
 int						odx_clock=366;
 SDL_AudioSpec 			odx_audio_spec;
-SDL_mutex 				*sndlock;
+SDL_mutex 				*sndlock = NULL;
 unsigned int			odx_audio_buffer_len=0;
 unsigned int			odx_buf_read_pos=0;
 unsigned int			odx_buf_write_pos=0;
@@ -46,9 +46,9 @@ unsigned int			odx_sound_rate=44100;
 int						odx_sound_stereo=1;
 int						rotate_controls=0;
 unsigned char			odx_keys[OD_KEY_MAX];
-#ifdef _GCW0_
-SDL_Joystick			*odx_joyanalog;
-#endif
+//#ifdef _GCW0_
+//SDL_Joystick			*odx_joyanalog;
+//#endif
 
 extern int master_volume;
 
@@ -58,6 +58,7 @@ void odx_video_flip(void)
 {
 	//SDL_BlitSurface(layer,0,video,0);
 	SDL_Flip(video);
+	SDL_Flip(video);
 	od_screen16=(unsigned short *) video->pixels;
 	od_screen8=(unsigned char *) od_screen16;
 }
@@ -65,6 +66,7 @@ void odx_video_flip(void)
 void odx_video_flip_single(void)
 {
 	//SDL_BlitSurface(layer,0,video,0);
+	SDL_Flip(video);
 	SDL_Flip(video);
 	od_screen16=(unsigned short *) video->pixels;
 	od_screen8=(unsigned char *) od_screen16;
@@ -94,7 +96,7 @@ unsigned int odx_joystick_read()
 
 	if ( (keystates[SDLK_RETURN] == SDL_PRESSED) )  { res |=  OD_START;  } // START
 	if ( (keystates[SDLK_ESCAPE] == SDL_PRESSED) ) { res |=  OD_SELECT; } // SELECT
-
+/*
 #ifdef _GCW0_
 	// manage joystick
 	if (odx_joyanalog) {
@@ -128,7 +130,7 @@ unsigned int odx_joystick_read()
 		if (SDL_JoystickGetButton(odx_joyanalog,7)) { res |=  OD_SELECT; } // SELECT
 	}
 #endif
-
+*/
 	return res;
 }
 
@@ -176,8 +178,11 @@ void odx_sound_volume(int vol)
 
 void odx_sound_play(void *buff, int len)
 {
+	if(!sndlock)
+		return;
+
 	SDL_LockMutex(sndlock);
-	
+
 	if( odx_sndlen+len > odx_audio_buffer_len ) {
 		// Overrun 
 		odx_sndlen = 0;
@@ -195,8 +200,11 @@ void odx_sound_play(void *buff, int len)
 
 static void odx_sound_callback(void *data, Uint8 *stream, int len)
 {
+	if(!sndlock)
+		return;
+
 	SDL_LockMutex(sndlock);
-	
+
 	if( odx_sndlen < len ) {
 		memcpy( stream, data, odx_sndlen );
 		memset( stream+odx_sndlen, 0, len-odx_sndlen );
@@ -240,9 +248,11 @@ void odx_sound_thread_start(void)
 
 void odx_sound_thread_stop(void)
 {
+	SDL_LockMutex(sndlock);
 	SDL_PauseAudio(1);
 
 	SDL_DestroyMutex(sndlock);
+	sndlock = NULL;
 	SDL_CloseAudio();
 	SDL_QuitSubSystem(SDL_INIT_AUDIO);
 
@@ -263,12 +273,12 @@ void odx_init(int ticks_per_second, int bpp, int rate, int bits, int stereo, int
 
 	/* General video & audio stuff */
 	SDL_Init(SDL_INIT_VIDEO|SDL_INIT_AUDIO);
-	video = SDL_SetVideoMode(320, 240, 16, SDL_DOUBLEBUF | SDL_HWSURFACE );
+	video = SDL_SetVideoMode(ODX_SCREEN_WIDTH, ODX_SCREEN_HEIGHT, 16, SDL_DOUBLEBUF | SDL_HWSURFACE );
 	if(video == NULL) {
 		fprintf(stderr, "Couldn't set video mode: %s\n", SDL_GetError());
 		exit(1);
 	}
-
+/*
 #ifdef _GCW0_
 	// Analog stick is off 
 	odx_joyanalog = NULL;
@@ -283,7 +293,7 @@ void odx_init(int ticks_per_second, int bpp, int rate, int bits, int stereo, int
 		//exit(1);
 	}
 #endif
-
+*/
 	SDL_EventState(SDL_ACTIVEEVENT,SDL_IGNORE);
 	SDL_EventState(SDL_MOUSEMOTION,SDL_IGNORE);
 	SDL_EventState(SDL_MOUSEBUTTONDOWN,SDL_IGNORE);
@@ -303,7 +313,7 @@ void odx_init(int ticks_per_second, int bpp, int rate, int bits, int stereo, int
     odx_audio_spec.callback = odx_sound_callback;
     odx_audio_spec.userdata = NULL;
 
-	odx_set_video_mode(bpp,320,240);
+	odx_set_video_mode(bpp,ODX_SCREEN_WIDTH,ODX_SCREEN_HEIGHT);
 
 	odx_video_color8(0,0,0,0);
 	odx_video_color8(255,255,255,255);
@@ -314,9 +324,11 @@ void odx_init(int ticks_per_second, int bpp, int rate, int bits, int stereo, int
 
 void odx_deinit(void)
 {
+	SDL_LockMutex(sndlock);
 	SDL_PauseAudio(1);
 
 	SDL_DestroyMutex(sndlock);
+	sndlock = NULL;
 	SDL_CloseAudio();
 
 	//if (layer) SDL_FreeSurface(layer);
@@ -324,7 +336,7 @@ void odx_deinit(void)
 	if (video) SDL_FreeSurface(video);
 	video=NULL;
 
-	SDL_QuitSubSystem(SDL_INIT_VIDEO|SDL_INIT_AUDIO|SDL_INIT_JOYSTICK);
+	SDL_QuitSubSystem(SDL_INIT_VIDEO|SDL_INIT_AUDIO);//|SDL_INIT_JOYSTICK);
 }
 
 void odx_set_clock(int mhz)
@@ -503,19 +515,28 @@ static const unsigned char fontdata8x8[2048] =
 static void odx_text(unsigned short *scr, int x, int y, char *text, int color)
 {
 	unsigned int i,l;
-	scr=scr+x+y*320;
+	scr=scr+x+y*ODX_SCREEN_WIDTH;
 
 	for (i=0;i<strlen(text);i++) {
-		
+		unsigned int copy = 0;
 		for (l=0;l<8;l++) {
-			scr[l*320+0]=(fontdata8x8[((text[i])*8)+l]&0x80)?odx_palette_rgb[color]:scr[l*320+0];
-			scr[l*320+1]=(fontdata8x8[((text[i])*8)+l]&0x40)?odx_palette_rgb[color]:scr[l*320+1];
-			scr[l*320+2]=(fontdata8x8[((text[i])*8)+l]&0x20)?odx_palette_rgb[color]:scr[l*320+2];
-			scr[l*320+3]=(fontdata8x8[((text[i])*8)+l]&0x10)?odx_palette_rgb[color]:scr[l*320+3];
-			scr[l*320+4]=(fontdata8x8[((text[i])*8)+l]&0x08)?odx_palette_rgb[color]:scr[l*320+4];
-			scr[l*320+5]=(fontdata8x8[((text[i])*8)+l]&0x04)?odx_palette_rgb[color]:scr[l*320+5];
-			scr[l*320+6]=(fontdata8x8[((text[i])*8)+l]&0x02)?odx_palette_rgb[color]:scr[l*320+6];
-			scr[l*320+7]=(fontdata8x8[((text[i])*8)+l]&0x01)?odx_palette_rgb[color]:scr[l*320+7];
+			scr[copy*ODX_SCREEN_WIDTH+0]=(fontdata8x8[((text[i])*8)+l]&0x80)?odx_palette_rgb[color]:scr[copy*ODX_SCREEN_WIDTH+0];
+			scr[copy*ODX_SCREEN_WIDTH+1]=(fontdata8x8[((text[i])*8)+l]&0x40)?odx_palette_rgb[color]:scr[copy*ODX_SCREEN_WIDTH+1];
+			scr[copy*ODX_SCREEN_WIDTH+2]=(fontdata8x8[((text[i])*8)+l]&0x20)?odx_palette_rgb[color]:scr[copy*ODX_SCREEN_WIDTH+2];
+			scr[copy*ODX_SCREEN_WIDTH+3]=(fontdata8x8[((text[i])*8)+l]&0x10)?odx_palette_rgb[color]:scr[copy*ODX_SCREEN_WIDTH+3];
+			scr[copy*ODX_SCREEN_WIDTH+4]=(fontdata8x8[((text[i])*8)+l]&0x08)?odx_palette_rgb[color]:scr[copy*ODX_SCREEN_WIDTH+4];
+			scr[copy*ODX_SCREEN_WIDTH+5]=(fontdata8x8[((text[i])*8)+l]&0x04)?odx_palette_rgb[color]:scr[copy*ODX_SCREEN_WIDTH+5];
+			scr[copy*ODX_SCREEN_WIDTH+6]=(fontdata8x8[((text[i])*8)+l]&0x02)?odx_palette_rgb[color]:scr[copy*ODX_SCREEN_WIDTH+6];
+			scr[copy*ODX_SCREEN_WIDTH+7]=(fontdata8x8[((text[i])*8)+l]&0x01)?odx_palette_rgb[color]:scr[copy*ODX_SCREEN_WIDTH+7];
+			copy++;
+			scr[copy*ODX_SCREEN_WIDTH+0]=(fontdata8x8[((text[i])*8)+l]&0x80)?odx_palette_rgb[color]:scr[copy*ODX_SCREEN_WIDTH+0];
+			scr[copy*ODX_SCREEN_WIDTH+1]=(fontdata8x8[((text[i])*8)+l]&0x40)?odx_palette_rgb[color]:scr[copy*ODX_SCREEN_WIDTH+1];
+			scr[copy*ODX_SCREEN_WIDTH+2]=(fontdata8x8[((text[i])*8)+l]&0x20)?odx_palette_rgb[color]:scr[copy*ODX_SCREEN_WIDTH+2];
+			scr[copy*ODX_SCREEN_WIDTH+3]=(fontdata8x8[((text[i])*8)+l]&0x10)?odx_palette_rgb[color]:scr[copy*ODX_SCREEN_WIDTH+3];
+			scr[copy*ODX_SCREEN_WIDTH+4]=(fontdata8x8[((text[i])*8)+l]&0x08)?odx_palette_rgb[color]:scr[copy*ODX_SCREEN_WIDTH+4];
+			scr[copy*ODX_SCREEN_WIDTH+5]=(fontdata8x8[((text[i])*8)+l]&0x04)?odx_palette_rgb[color]:scr[copy*ODX_SCREEN_WIDTH+5];
+			scr[copy*ODX_SCREEN_WIDTH+6]=(fontdata8x8[((text[i])*8)+l]&0x02)?odx_palette_rgb[color]:scr[copy*ODX_SCREEN_WIDTH+6];
+			scr[copy*ODX_SCREEN_WIDTH+7]=(fontdata8x8[((text[i])*8)+l]&0x01)?odx_palette_rgb[color]:scr[copy*ODX_SCREEN_WIDTH+7];				copy++;
 		}
 		//scr+=8;
 		scr+=6;

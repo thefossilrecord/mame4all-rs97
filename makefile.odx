@@ -1,7 +1,7 @@
 # Define compilation type
-OSTYPE=msys
+#OSTYPE=msys
 #OSTYPE=oda320
-#OSTYPE=gcw0
+OSTYPE=gcw0
 
 ifeq ($(TARGET),)
 TARGET = mame
@@ -29,7 +29,7 @@ LD          = $(TOOLCHAIN)/bin/gcc
 else
 
 ifeq "$(OSTYPE)" "gcw0"	
-TOOLCHAIN = /opt/gcw0-toolchain/usr
+TOOLCHAIN = /opt/retrogame-toolchain/usr
 else
 TOOLCHAIN = /opt/opendingux-toolchain/usr
 endif

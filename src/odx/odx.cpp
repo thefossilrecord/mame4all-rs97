@@ -113,6 +113,8 @@ int main (int argc, char **argv)
 			video_scale=3;
 		if (strcasecmp(argv[i],"-fastscale") == 0)
 			video_scale=4;
+		if (strcasecmp(argv[i],"-double") == 0)
+			video_scale=5;
 		if (strcasecmp(argv[i],"-border") == 0)
 			video_border=1;
 		if (strcasecmp(argv[i],"-aspect") == 0)

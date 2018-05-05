@@ -23,7 +23,7 @@
 #include <SDL/SDL.h>
 
 #define ODX_SCREEN_WIDTH 320
-#define ODX_SCREEN_HEIGHT 240
+#define ODX_SCREEN_HEIGHT 480
 
 #define odx_video_color8(C,R,G,B)  (odx_palette_rgb[C] = ((((R)&0xF8)<<8)|(((G)&0xFC)<<3)|(((B)&0xF8)>>3)))
 #define odx_video_color16(R,G,B,A) ((((R)&0xF8)<<8)|(((G)&0xFC)<<3)|(((B)&0xF8)>>3))
