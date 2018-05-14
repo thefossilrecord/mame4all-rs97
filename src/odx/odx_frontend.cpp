@@ -19,7 +19,7 @@
 
 #define COMPATCORES 1
 
-char build_version[] = "RS-97 V1.2";
+char frontend_build_version[] = "RS-97 V1.2";
 
 static unsigned char splash_bmp[BMP_SIZE];
 static unsigned char menu_bmp[BMP_SIZE];
@@ -45,7 +45,7 @@ int odx_ramtweaks=0;
 int odx_cheat=0;
 int odx_gsensor=0;
 
-int master_volume = 100;
+bool want_exit = false, first_run = true;
 
 char romdir[512];
 
@@ -67,7 +67,6 @@ static void blit_bmp_8bpp(unsigned char *out, unsigned char *in)
 static void odx_intro_screen(void) {
 	char name[256];
 	FILE *f;
-	odx_video_flip();
 	sprintf(name,"skins/splash.bmp");
 	f=fopen(name,"rb");
 	if (f) {
@@ -75,7 +74,8 @@ static void odx_intro_screen(void) {
 		fclose(f);
 	}
 	blit_bmp_8bpp(od_screen8,splash_bmp);
-	odx_gamelist_text_out(1,ODX_SCREEN_HEIGHT - 16, build_version);
+
+	odx_gamelist_text_out(1,ODX_SCREEN_HEIGHT - 16, frontend_build_version);
 	odx_gamelist_text_out(ODX_SCREEN_WIDTH - (10 * 8),ODX_SCREEN_HEIGHT - 16, "bob_fossil");
 
 	odx_video_flip();
@@ -109,12 +109,12 @@ static void game_list_init_nocache(void)
 		{
 			for (i=0;i<NUMGAMES;i++)
 			{
-				if (drivers[i].available==0)
+				if (frontend_drivers[i].available==0)
 				{
-					sprintf(game,"%s.zip",drivers[i].name);
+					sprintf(game,"%s.zip",frontend_drivers[i].name);
 					if (strcmp(actual->d_name,game)==0)
 					{
-						drivers[i].available=1;
+						frontend_drivers[i].available=1;
 						game_num_avail++;
 						break;
 					}
@@ -135,7 +135,7 @@ static void game_list_init_nocache(void)
 		{
 			for (i=0;i<NUMGAMES;i++)
 			{
-				fputc(drivers[i].available,f);
+				fputc(frontend_drivers[i].available,f);
 			}
 			fclose(f);
 			/* sync(); */
@@ -154,8 +154,8 @@ static void game_list_init_cache(void)
 	{
 		for (i=0;i<NUMGAMES;i++)
 		{
-			drivers[i].available=fgetc(f);
-			if (drivers[i].available)
+			frontend_drivers[i].available=fgetc(f);
+			if (frontend_drivers[i].available)
 				game_num_avail++;
 		}
 		fclose(f);
@@ -187,7 +187,7 @@ static void game_list_view(int *pos) {
 	odx_gamelist_text_out( 4, 60,"Select ROM");
 	odx_gamelist_text_out( 4, Y_BOTTOM_LINE,"A=Select Game/Start  B=Back");
 	odx_gamelist_text_out( 268, Y_BOTTOM_LINE,"L+R=Exit");
-	odx_gamelist_text_out( X_BUILD,2,build_version);
+	odx_gamelist_text_out( X_BUILD,2,frontend_build_version);
 
 	/* Check Limits */
 	if (*pos<0)
@@ -209,9 +209,9 @@ static void game_list_view(int *pos) {
 
 	/* Show List */
 	for (i=0;i<NUMGAMES;i++) {
-		if (drivers[i].available==1) {
+		if (frontend_drivers[i].available==1) {
 			if (aux_pos>=view_pos && aux_pos<=view_pos+21) { // ALEK 20
-				odx_gamelist_text_out( screen_x, screen_y, drivers[i].description);
+				odx_gamelist_text_out( screen_x, screen_y, frontend_drivers[i].description);
 				if (aux_pos==*pos) {
 					odx_gamelist_text_out( screen_x-10, screen_y,">" );
 					odx_gamelist_text_out( screen_x-13, screen_y-1,"-" );
@@ -228,12 +228,12 @@ static void game_list_select (int index, char *game, char *emu) {
 	int aux_pos=0;
 	for (i=0;i<NUMGAMES;i++)
 	{
-		if (drivers[i].available==1)
+		if (frontend_drivers[i].available==1)
 		{
 			if(aux_pos==index)
 			{
-				strcpy(game,drivers[i].name);
-				strcpy(emu,drivers[i].exe);
+				strcpy(game,frontend_drivers[i].name);
+				strcpy(emu,frontend_drivers[i].exe);
 				break;
 			}
 			aux_pos++;
@@ -246,9 +246,9 @@ static char *game_list_description (int index)
 	int i;
 	int aux_pos=0;
 	for (i=0;i<NUMGAMES;i++) {
-		if (drivers[i].available==1) {
+		if (frontend_drivers[i].available==1) {
 			if(aux_pos==index) {
-				return(drivers[i].description);
+				return(frontend_drivers[i].description);
 			}
 			aux_pos++;
 		   }
@@ -288,7 +288,7 @@ static int show_options(char *game)
 		odx_gamelist_text_out( 4, 60,"Game Options");
 		odx_gamelist_text_out( 4, Y_BOTTOM_LINE,"A=Select Game/Start  B=Back");
 		odx_gamelist_text_out( 268, Y_BOTTOM_LINE,"L+R=Exit");
-		odx_gamelist_text_out( X_BUILD,2,build_version);
+		odx_gamelist_text_out( X_BUILD,2,frontend_build_version);
 
 		/* Draw the options */
 		strncpy (text,game_list_description(last_game_selected),33);
@@ -393,7 +393,7 @@ static int show_options(char *game)
 		/* Show currently selected item */
 		odx_gamelist_text_out(x_Pos-16,y_PosTop+(selected_option*20)+20," >");
 
-		odx_video_flip(); 
+		odx_video_flip();
 		while (odx_joystick_read()) { odx_timer_delay(100); }
 		while(!(ExKey=odx_joystick_read())) { }
 		if(ExKey & OD_DOWN){
@@ -530,8 +530,8 @@ static void odx_exit(char *param)
 	
 	sprintf(text,"%s/frontend/mame.lst",mamedir);
 	remove(text);
-	/* sync(); */
-	odx_deinit();
+	//sync();
+	//odx_deinit();
 }
 
 void odx_load_config(void) {
@@ -573,7 +573,7 @@ static void select_game(char *emu, char *game)
 	odx_video_flip();
 
 	/* Wait until user selects a game */
-	while(1)
+	while(!want_exit)
 	{
 		game_list_view(&last_game_selected);
 		odx_video_flip();
@@ -583,7 +583,12 @@ static void select_game(char *emu, char *game)
 		while(!(ExKey=odx_joystick_read())) { 
 		}
 
-		if ((ExKey & OD_L) && (ExKey & OD_R) ) { odx_save_config(); odx_exit(""); }
+		if ((ExKey & OD_L) && (ExKey & OD_R) )
+			{
+			odx_save_config();
+			odx_exit("");
+			want_exit = true;
+			}
 		if (ExKey & OD_UP) last_game_selected--;
 		if (ExKey & OD_DOWN) last_game_selected++;
 		if (ExKey & OD_LEFT) last_game_selected-=22; // ALEK 21
@@ -603,208 +608,214 @@ static void select_game(char *emu, char *game)
 	}
 }
 
+char *mame_args[255];
+int margc = 0;
+
 void execute_game (char *playemu, char *playgame)
 {
-	char *args[255];
 	char str[8][64];
-	int n=0;
+
 	int i=0;
+
+	for(int reset = 0; reset < 255; reset++)
+		mame_args[reset] = NULL;
+
+	margc = 0;
 	
-	/* executable */
-	args[n]=playemu; n++;
+	// executable
+	mame_args[margc]=playemu; margc++;
 
-	/* playgame */
-	args[n]=playgame; n++;
+	// playgame
+	mame_args[margc]=playgame; margc++;
 
-	/* odx_freq */
-	/*args[n]="-clock"; n++;
-	sprintf(str[i],"%d",odx_freq);
-	args[n]=str[i]; i++; n++;*/
+	// odx_freq
+	//args[margc]="-clock"; n++;
+	//sprintf(str[i],"%d",odx_freq);
+	//args[margc]=str[i]; i++; n++;
 
-	/* odx_video_depth */
+	// odx_video_depth
 	if (odx_video_depth==8)
 	{
-		args[n]="-depth"; n++;
-		args[n]="8"; n++;
+		mame_args[margc]="-depth"; margc++;
+		mame_args[margc]="8"; margc++;
 	}
 	if (odx_video_depth==16)
 	{
-		args[n]="-depth"; n++;
-		args[n]="16"; n++;
+		mame_args[margc]="-depth"; margc++;
+		mame_args[margc]="16"; margc++;
 	}
 
-	/* odx_video_aspect */
+	// odx_video_aspect
 	if ((odx_video_aspect==1) || (odx_video_aspect==6))
 	{
-		args[n]="-horizscale"; n++;
-		args[n]="-nodirty"; n++;
+		mame_args[margc]="-horizscale"; margc++;
+		mame_args[margc]="-nodirty"; margc++;
 	}
 	if ((odx_video_aspect==2) || (odx_video_aspect==7))
 	{
-		args[n]="-bestscale"; n++;
-		args[n]="-nodirty"; n++;
+		mame_args[margc]="-bestscale"; margc++;
+		mame_args[margc]="-nodirty"; margc++;
 	}
 	if ((odx_video_aspect==3) || (odx_video_aspect==8))
 	{
-		args[n]="-fastscale"; n++;
-		args[n]="-nodirty"; n++;
+		mame_args[margc]="-fastscale"; margc++;
+		mame_args[margc]="-nodirty"; margc++;
 	}
 	if ((odx_video_aspect==4) || (odx_video_aspect==9))
 	{
-		args[n]="-halfscale"; n++;
-		args[n]="-nodirty"; n++;
+		mame_args[margc]="-halfscale"; margc++;
+		mame_args[margc]="-nodirty"; margc++;
 	}
 	if ((odx_video_aspect>=5) && (odx_video_aspect<=9))
 	{
-		args[n]="-rotatecontrols"; n++;
-		args[n]="-ror"; n++;
+		mame_args[margc]="-rotatecontrols"; margc++;
+		mame_args[margc]="-ror"; margc++;
 	}
 	if (odx_video_aspect==10)
 	{
-		args[n]="-double"; n++;
-		args[n]="-nodirty"; n++;
+		mame_args[margc]="-double"; margc++;
+		mame_args[margc]="-nodirty"; margc++;
 	}
 	
-	/* odx_video_sync */
+	// odx_video_sync
 	if (odx_video_sync==1)
 	{
-		args[n]="-nodirty"; n++;
-		args[n]="-waitvsync"; n++;
+		mame_args[margc]="-nodirty"; margc++;
+		mame_args[margc]="-waitvsync"; margc++;
 	}
 	else if ((odx_video_sync==2) || (odx_video_aspect==1) || (odx_video_aspect==9))
 	{
-		args[n]="-nodirty"; n++;
+		mame_args[margc]="-nodirty"; margc++;
 	}
 	if (odx_video_sync==-1)
 	{
-		args[n]="-nothrottle"; n++;
+		mame_args[margc]="-nothrottle"; margc++;
 	}
 	
-	/* odx_frameskip */
+	// odx_frameskip
 	if (odx_frameskip>=0)
 	{
-		args[n]="-frameskip"; n++;
+		mame_args[margc]="-frameskip"; margc++;
 		sprintf(str[i],"%d",odx_frameskip);
-		args[n]=str[i]; i++; n++;
+		mame_args[margc]=str[i]; i++; margc++;
 	}
 
-	/* odx_sound */
+	// odx_sound
 	if (odx_sound==0)
 	{
-		args[n]="-soundcard"; n++;
-		args[n]="0"; n++;
+		mame_args[margc]="-soundcard"; margc++;
+		mame_args[margc]="0"; margc++;
 	}
 	if ((odx_sound==1) || (odx_sound==6) || (odx_sound==11))
 	{
-		args[n]="-samplerate"; n++;
-		args[n]="15000"; n++;
+		mame_args[margc]="-samplerate"; margc++;
+		mame_args[margc]="15000"; margc++;
 	}
 	if ((odx_sound==2) || (odx_sound==7) || (odx_sound==12))
 	{
-		args[n]="-samplerate"; n++;
-		args[n]="22050"; n++;
+		mame_args[margc]="-samplerate"; margc++;
+		mame_args[margc]="22050"; margc++;
 	}
 	if ((odx_sound==3) || (odx_sound==8) || (odx_sound==13))
 	{
-		args[n]="-samplerate"; n++;
-		args[n]="32000"; n++;
+		mame_args[margc]="-samplerate"; margc++;
+		mame_args[margc]="32000"; margc++;
 	}
 	if ((odx_sound==4) || (odx_sound==9) || (odx_sound==14))
 	{
-		args[n]="-samplerate"; n++;
-		args[n]="44100"; n++;
+		mame_args[margc]="-samplerate"; margc++;
+		mame_args[margc]="44100"; margc++;
 	}
 	if ((odx_sound==5) || (odx_sound==10) || (odx_sound==15))
 	{
-		args[n]="-samplerate"; n++;
-		args[n]="11025"; n++;
+		mame_args[margc]="-samplerate"; margc++;
+		mame_args[margc]="11025"; margc++;
 	}
 	if ((odx_sound>=1) && (odx_sound<=5))
 	{
-		args[n]="-fastsound"; n++;
+		mame_args[margc]="-fastsound"; margc++;
 	}
 	if (odx_sound>=11)
 	{
-		args[n]="-stereo"; n++;
+		mame_args[margc]="-stereo"; margc++;
 	}
 
-	/* odx_clock_cpu */
+	// odx_clock_cpu
 	if (odx_clock_cpu!=100)
 	{
-		args[n]="-uclock"; n++;
+		mame_args[margc]="-uclock"; margc++;
 		sprintf(str[i],"%d",100-odx_clock_cpu);
-		args[n]=str[i]; i++; n++;
+		mame_args[margc]=str[i]; i++; margc++;
 	}
 
-	/* odx_clock_sound */
+	// odx_clock_sound
 	if (odx_clock_cpu!=100)
 	{
-		args[n]="-uclocks"; n++;
+		mame_args[margc]="-uclocks"; margc++;
 		sprintf(str[i],"%d",100-odx_clock_sound);
-		args[n]=str[i]; i++; n++;
+		mame_args[margc]=str[i]; i++; margc++;
 	}
 	
-	/* odx_cpu_cores */
+	// odx_cpu_cores
 	if ((odx_cpu_cores==1) )
 	{
-		args[n]="-fame"; n++;
+		mame_args[margc]="-fame"; margc++;
 	}
 #if 0	
 	if ((odx_cpu_cores==1) || (odx_cpu_cores==3) || (odx_cpu_cores==5))
 	{
-		args[n]="-cyclone"; n++;
+		mame_args[margc]="-cyclone"; margc++;
 	}
 	if ((odx_cpu_cores==2) || (odx_cpu_cores==3))
 	{
-		args[n]="-drz80"; n++;
+		mame_args[margc]="-drz80"; margc++;
 	}
 	if ((odx_cpu_cores==4) || (odx_cpu_cores==5))
 	{
-		args[n]="-drz80_snd"; n++;
+		mame_args[margc]="-drz80_snd"; margc++;
 	}
 #endif
 
 	if (odx_ramtweaks)
 	{
-		args[n]="-ramtweaks"; n++;
+		mame_args[margc]="-ramtweaks"; margc++;
 	}
 	
 	if (odx_cheat)
 	{
-		args[n]="-cheat"; n++;
+		mame_args[margc]="-cheat"; margc++;
 	}
 
 	if (odx_video_aspect==24)
 	{
-		args[n]="-odx_rotated_video"; n++;
-    	args[n]="-rol"; n++;
+		mame_args[margc]="-odx_rotated_video"; margc++;
+    	mame_args[margc]="-rol"; margc++;
 	}
     if (odx_video_aspect==25)
     {
-		args[n]="-odx_rotated_video"; n++;
-		args[n]="-rotatecontrols"; n++;
+		mame_args[margc]="-odx_rotated_video"; margc++;
+		mame_args[margc]="-rotatecontrols"; margc++;
     }
 	
-	/* Add mame and rom directory */
-    args[n]="-mamepath"; n++;
-	args[n]=mamedir;n++;
-    args[n]="-rompath"; n++;;
-	args[n]=romdir;n++;
-	
-	args[n]=NULL;
+	// Add mame and rom directory
+    mame_args[margc]="-mamepath"; margc++;
+	mame_args[margc]=mamedir;margc++;
+    mame_args[margc]="-rompath"; margc++;;
+	mame_args[margc]=romdir;margc++;
+
+	mame_args[margc]=NULL;
 
 #if 0
 	for (i=0; i<n; i++)
 	{
-		fprintf(stderr,"%s ",args[i]);
+		fprintf(stderr,"%s ",mame_args[i]);
 	}
 	fprintf(stderr,"\n");
 	fflush(stderr);
 #endif
-	odx_deinit();
-	execv(args[0], args); 
+//	odx_deinit();
+//	execv(mame_args[0], args);
 }
-
  
 #define FILE_LIST_ROWS 19
 #define MAX_FILES 512
@@ -890,14 +901,14 @@ signed int get_romdir(char *result) {
 
 		char print_buffer[81];
 
-		while(repeat) {
+		while(repeat && !want_exit) {
 			blit_bmp_8bpp(od_screen8,menu_bmp);
 			
 			odx_gamelist_text_out( 182, 60,"Select a ROM directory");
 			odx_gamelist_text_out( 4, 430,current_dir_short );
 			odx_gamelist_text_out( 4, Y_BOTTOM_LINE,"A=Enter dir START=Select dir");
 			odx_gamelist_text_out( 280, Y_BOTTOM_LINE,"B=Quit");
-			odx_gamelist_text_out( X_BUILD,2,build_version);
+			odx_gamelist_text_out( X_BUILD,2,frontend_build_version);
 			
 			for(i = 0, current_filedir_number = i + current_filedir_scroll_value; i < FILE_LIST_ROWS; i++, current_filedir_number++) {
 #define CHARLEN ((320/6)-2)
@@ -918,7 +929,7 @@ signed int get_romdir(char *result) {
 			}
 
 			/* L + R = Exit */
-			if ((ExKey & OD_L) && (ExKey & OD_R) ) { odx_exit(""); }
+			if ((ExKey & OD_L) && (ExKey & OD_R) ) { want_exit = true; odx_exit(""); }
 		
 			// START - choose directory
 			if (ExKey & OD_START) { 
@@ -1012,56 +1023,81 @@ void gethomedir(char *dir, char* name) {
 	}
 }
 
-int main (int argc, char **argv)
+int do_frontend ()
 {
 	char curDir[512];
 
-	/* get initial home directory */
-	gethomedir(mamedir,"mame4all");
-	strcpy(romdir,"");
-	
-	/* Open dingux Initialization */
-	odx_init(1000,16,44100,16,0,60);
+	int result = 0;
 
-	/* Show intro screen */
-	if (argc==1)
+	odx_video_color8(0,0,0,0);
+	odx_video_color8(255,255,255,255);
+	odx_video_setpalette();
+
+	odx_clear_video();
+
+	while(odx_joystick_read()) { odx_timer_delay(100); }
+
+	if(first_run)
+		{
+		/* get initial home directory */
+		gethomedir(mamedir,"mame4all");
+		strcpy(romdir,"");
+
+		/* Open dingux Initialization */
+		//odx_init(1000,16,44100,16,0,60);
+
+		/* Show intro screen */
 		odx_intro_screen();
 
-	/* Read default configuration */
-	odx_load_config();
+		/* Read default configuration */
+		odx_load_config();
 
-	/* Initialize list of available games */
-	game_list_init(argc);
-	if (game_num_avail==0)
-	{
-		/* save current dir */
-		getcwd(curDir, 256);
-		
-		/* Check for rom dir */
-		while (game_num_avail == 0) {
-			odx_gamelist_text_out(10, 40, "Error: No available games found !");
-			odx_gamelist_text_out(10, 80, "Press a key to select a rom directory");
-			odx_video_flip();
-			odx_joystick_press();
-			if (get_romdir(romdir) == -1) {
-				odx_exit("");
+		/* Initialize list of available games */
+		game_list_init(0);
+		if (game_num_avail==0)
+			{
+			/* save current dir */
+			getcwd(curDir, 256);
+
+			/* Check for rom dir */
+			while (game_num_avail == 0)
+				{
+				odx_gamelist_text_out(10, 20, "Error: No available games found !");
+				odx_gamelist_text_out(10, 40, "Press a key to select a rom directory");
+				odx_video_flip();
+				odx_joystick_press();
+				// !!!
+				if (get_romdir(romdir) == -1)
+					{
+					want_exit = true;
+					break;
+					}
+				else
+					{
+					game_list_init(0);
+					}
+				}
+
+			/* go back to default dir to avoid issue when launching mame after */
+			chdir(curDir);
 			}
-			else {
-				game_list_init(argc);
-			}
+
+		first_run = false;
 		}
-		/* go back to default dir to avoid issue when launching mame after */
-		chdir(curDir);
-	}
 
-	/* Select Game */
-	select_game(playemu,playgame); 
+	if(!want_exit)
+		{
+		/* Select Game */
+		select_game(playemu,playgame);
 
-	/* Write default configuration */
-	odx_save_config();
+		/* Write default configuration */
+		odx_save_config();
 
-	/* Execute Game */
-	execute_game (playemu,playgame);
-	
-	exit (0);
+		/* Execute Game */
+		execute_game (playemu,playgame);
+		}
+
+	odx_printf_init();
+
+	return want_exit ? 0 : 1;
 }

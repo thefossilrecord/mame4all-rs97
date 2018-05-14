@@ -603,6 +603,11 @@ void osd_led_w(int led,int on) {
 void msdos_init_input (void)
 {
 	int i;
+
+	ExKey1=0;
+	ExKey2=0;
+	ExKey3=0;
+	ExKey4=0;
 	
 	/* Initialize keyboard to not pressed */
 	for (i = 0;i < KEY_MAX;i++)

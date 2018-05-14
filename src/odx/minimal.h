@@ -63,6 +63,7 @@ extern SDL_Joystick				*odx_joyanalog;
 
 extern void odx_video_flip(void);
 extern void odx_video_flip_single(void);
+extern void odx_video_flip_double(void);
 extern void odx_video_wait_vsync(void);
 extern void odx_video_setpalette(void);
 

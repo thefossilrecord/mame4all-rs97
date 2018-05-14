@@ -54,7 +54,7 @@ extern int master_volume;
 
 signed int axis_x=0, axis_y=0;
 
-void odx_video_flip(void)
+void odx_video_flip_double(void)
 {
 	//SDL_BlitSurface(layer,0,video,0);
 	SDL_Flip(video);
@@ -63,10 +63,16 @@ void odx_video_flip(void)
 	od_screen8=(unsigned char *) od_screen16;
 }
 
+void odx_video_flip(void)
+{
+	SDL_Flip(video);
+	od_screen16=(unsigned short *) video->pixels;
+	od_screen8=(unsigned char *) od_screen16;
+}
+
 void odx_video_flip_single(void)
 {
 	//SDL_BlitSurface(layer,0,video,0);
-	SDL_Flip(video);
 	SDL_Flip(video);
 	od_screen16=(unsigned short *) video->pixels;
 	od_screen8=(unsigned char *) od_screen16;
@@ -254,7 +260,6 @@ void odx_sound_thread_stop(void)
 	SDL_DestroyMutex(sndlock);
 	sndlock = NULL;
 	SDL_CloseAudio();
-	SDL_QuitSubSystem(SDL_INIT_AUDIO);
 
 	if( odx_audio_spec.userdata ) {
 		free( odx_audio_spec.userdata );
@@ -273,7 +278,7 @@ void odx_init(int ticks_per_second, int bpp, int rate, int bits, int stereo, int
 
 	/* General video & audio stuff */
 	SDL_Init(SDL_INIT_VIDEO|SDL_INIT_AUDIO);
-	video = SDL_SetVideoMode(ODX_SCREEN_WIDTH, ODX_SCREEN_HEIGHT, 16, SDL_DOUBLEBUF | SDL_HWSURFACE );
+	video = SDL_SetVideoMode(ODX_SCREEN_WIDTH, ODX_SCREEN_HEIGHT, 16, SDL_HWSURFACE);//SDL_DOUBLEBUF | 
 	if(video == NULL) {
 		fprintf(stderr, "Couldn't set video mode: %s\n", SDL_GetError());
 		exit(1);
@@ -314,12 +319,6 @@ void odx_init(int ticks_per_second, int bpp, int rate, int bits, int stereo, int
     odx_audio_spec.userdata = NULL;
 
 	odx_set_video_mode(bpp,ODX_SCREEN_WIDTH,ODX_SCREEN_HEIGHT);
-
-	odx_video_color8(0,0,0,0);
-	odx_video_color8(255,255,255,255);
-	odx_video_setpalette();
-	
-	odx_clear_video();
 }
 
 void odx_deinit(void)
@@ -581,8 +580,8 @@ static void odx_text_log(char *texto)
 	}
 	odx_text(od_screen16,0,log,texto,255); 	odx_video_flip();
 	odx_text(od_screen16,0,log,texto,255); 	odx_video_flip(); // do twice to avoid flickering 
-	log+=8;
-	if(log>239) log=0;
+	log+=16;
+	if(log>ODX_SCREEN_HEIGHT-1) log=0;
 }
 
 /* Variadic functions guide found at http://www.unixpapa.com/incnote/variadic.html */
@@ -590,7 +589,7 @@ void odx_printf(char* fmt, ...)
 {
 	int i,c;
 	char strOut[4096];
-	char str[41];
+	char str[81];
 	va_list marker;
 	
 	va_start(marker, fmt);
@@ -607,9 +606,9 @@ void odx_printf(char* fmt, ...)
 			odx_text_log(str);
 			c=0;
 		}
-		else if (c==39)
+		else if (c==79)
 		{
-			str[40]=0;
+			str[80]=0;
 			odx_text_log(str);
 			c=0;
 		}		

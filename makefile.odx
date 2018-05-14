@@ -102,7 +102,7 @@ CDEFS = $(DEFS) $(COREDEFS) $(CPUDEFS) $(SOUNDDEFS)
 
 $(EMULATOR): $(COREOBJS) $(OSOBJS) $(DRVOBJS)
 	$(LD) $(LDFLAGS) $(COREOBJS) $(OSOBJS) $(LIBS) $(DRVOBJS) -o $@
-	$(MV) $(EMULATOR) distrib/mame4all/$(EMULATOR)
+	$(MV) $(EMULATOR) distrib/mame4all/mame4all.dge
 
 $(EMULATOR).dge: $(FEOBJS)
 	@echo Linking $@ ...

@@ -596,10 +596,10 @@ int run_machine(void)
 					}
 				}
 
-#ifdef __ODX__
+//#ifdef __ODX__
 				// clear screen because of double_buffering
 				odx_clear_video();
-#endif
+//#endif
 
 				if (settingsloaded == 0)
 				{

@@ -231,6 +231,12 @@ void init_inpdir(void)
     inpdir = get_string ("directory", "inp",     NULL, "inp");
 }
 
+void set_mame_args (int argc, char **argv)
+{
+	mame_argc = argc;
+	mame_argv = argv;
+}
+
 void parse_cmdline (int argc, char **argv, int game_index)
 {
 	static float f_beam, f_flicker;

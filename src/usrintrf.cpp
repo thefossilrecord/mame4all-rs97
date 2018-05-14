@@ -3450,7 +3450,10 @@ if (Machine->gamedrv->flags & GAME_COMPUTER)
 	/* if the user pressed ESC, stop the emulation */
 	/* but don't quit if the setup menu is on screen */
 	if (setup_selected == 0 && input_ui_pressed(IPT_UI_CANCEL))
+		{
+		show_profiler = 0;
 		return 1;
+		}
 
 	if (setup_selected == 0 && input_ui_pressed(IPT_UI_CONFIGURE))
 	{
