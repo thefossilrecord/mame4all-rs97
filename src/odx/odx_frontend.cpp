@@ -19,7 +19,7 @@
 
 #define COMPATCORES 1
 
-char frontend_build_version[] = "RS-97 V1.2";
+char frontend_build_version[] = "RS-97 V1.2 (103)";
 
 static unsigned char splash_bmp[BMP_SIZE];
 static unsigned char menu_bmp[BMP_SIZE];
