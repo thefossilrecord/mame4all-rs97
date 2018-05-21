@@ -68,7 +68,7 @@ const struct GameDriver *drivers[] =
 
 #else	/* DRIVER_RECURSIVE */
 
-#ifndef NEOMAME
+#//ifndef NEOMAME
 
 	/* "Pacman hardware" games */
 	DRIVER( pacman )	/* (c) 1980 Namco */
@@ -2893,7 +2893,7 @@ TESTDRIVER( dlair )
 TESTDRIVER( astrofl )	/* 834-5803 (c) 1986 */
 	DRIVER( ridleofp )	/* (c) 1986 Sega / Nasco */
 
-#else
+//#else
 
 	/* Neo Geo games */
 	/* the four digits number is the game ID stored at address 0x0108 of the program ROM */
@@ -3057,7 +3057,7 @@ TESTDRIVER( astrofl )	/* 834-5803 (c) 1986 */
 	/* Strikers 1945 Plus */
 	/* Ganryu */
 
-#endif /* NEOMAME */
+//#endif /* NEOMAME */
 
 #endif	/* DRIVER_RECURSIVE */
 

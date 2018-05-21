@@ -371,14 +371,20 @@ static int show_options(char *game)
 		y_Pos += 20;
 		odx_gamelist_text_out_fmt(x_Pos,y_Pos,"Audio Clock    %d%%",odx_clock_sound);
 
-		/* (7) CPU cores */
-		y_Pos += 20;
-		switch (odx_cpu_cores)
-		{
-			case 0: odx_gamelist_text_out(x_Pos,y_Pos, "CPU FAST cores None"); break;
-			case 1: odx_gamelist_text_out(x_Pos,y_Pos, "CPU FAST cores Fame"); break;
-			default:odx_gamelist_text_out(x_Pos,y_Pos, "CPU FAST cores None"); odx_cpu_cores = 0; break;
-		}
+		if(strcmp(playemu, "neomame"))
+			{
+			/* (7) CPU cores */
+			y_Pos += 20;
+			switch (odx_cpu_cores)
+				{
+				case 0: odx_gamelist_text_out(x_Pos,y_Pos, "CPU FAST cores None"); break;
+				case 1: odx_gamelist_text_out(x_Pos,y_Pos, "CPU FAST cores Fame"); break;
+				default:odx_gamelist_text_out(x_Pos,y_Pos, "CPU FAST cores None"); odx_cpu_cores = 0; break;
+				}
+			}
+		else
+			odx_cpu_cores = 0;
+
 
 		/* (8) Cheats */
 		y_Pos += 20;
