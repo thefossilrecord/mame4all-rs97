@@ -15,7 +15,7 @@
 #define BMP_SIZE ((SCREEN_WIDTH*SCREEN_HEIGHT)+(256*4)+54)
 
 #define Y_BOTTOM_LINE	460
-#define X_BUILD		(SCREEN_WIDTH - ((10 * 6)+2))
+#define X_BUILD		(SCREEN_WIDTH - ((16 * 6)+2))
 
 #define COMPATCORES 1
 
@@ -1032,8 +1032,6 @@ void gethomedir(char *dir, char* name) {
 int do_frontend ()
 {
 	char curDir[512];
-
-	int result = 0;
 
 	odx_video_color8(0,0,0,0);
 	odx_video_color8(255,255,255,255);
