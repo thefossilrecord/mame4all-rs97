@@ -128,7 +128,6 @@ int run_game(int game)
 	{
 		if (init_machine() == 0)
 		{
-		
 			if (run_machine() == 0)
 				err = 0;
 			else if (!bailing)

@@ -23,6 +23,9 @@ void blitscreen_dirty0_color8(struct osd_bitmap *bitmap);
 void blitscreen_dirty0_color16(struct osd_bitmap *bitmap);
 void blitscreen_dirty0_palettized16(struct osd_bitmap *bitmap);
 
+
+void init_blit_data();
+
 static void update_screen_dummy(struct osd_bitmap *bitmap);
 void (*update_screen)(struct osd_bitmap *bitmap) = update_screen_dummy;
 
@@ -50,6 +53,8 @@ int brightness;
 float brightness_paused_adjust;
 int gfx_width;
 int gfx_height;
+int x_aspect_lookup[ODX_SCREEN_WIDTH];
+int y_aspect_lookup[ODX_SCREEN_HEIGHT];
 
 unsigned int iAddX;
 unsigned int iModuloX;
@@ -402,6 +407,50 @@ logerror("video_scale %d\n",video_scale);
 			}
 			break;
 
+		case 6:		// aspect scale
+		case 7:		// aspect scale fast
+			{
+			if(visheight > gfx_height)
+				visheight = gfx_height;
+
+			gfx_display_lines = visheight;
+			gfx_display_columns = viswidth;
+
+			gfx_xoffset = (gfx_width - viswidth * xmultiply) / 2;
+			gfx_yoffset = 0;//(gfx_height - visheight * ymultiply) / 2;
+
+			// Generate aspect scaling lookups.
+			float gfx_x_aspect = (float)gfx_display_columns / (float)gfx_width;
+			float gfx_y_aspect = (float)gfx_display_lines / (float)gfx_height;
+
+			for(int set = 0; set < gfx_width; set++)
+				x_aspect_lookup[set] = set * gfx_x_aspect;
+			for(int set = 0; set < gfx_height; set++)
+				y_aspect_lookup[set] = set * gfx_y_aspect;
+			}
+			break;
+
+		case 8:		// full screen scale
+			{
+			if(visheight > gfx_height)
+				visheight = gfx_height;
+
+			gfx_display_lines = visheight;
+			gfx_display_columns = viswidth;
+
+			gfx_xoffset = gfx_yoffset = 0;
+
+			// Generate aspect scaling lookups.
+			float gfx_x_aspect = (float)gfx_display_columns / (float)gfx_width;
+			float gfx_y_aspect = (float)gfx_display_lines / (float)gfx_height;
+
+			for(int set = 0; set < gfx_width; set++)
+				x_aspect_lookup[set] = set * gfx_x_aspect;
+			for(int set = 0; set < gfx_height; set++)
+				y_aspect_lookup[set] = set * gfx_y_aspect;
+			}
+			break;
+
 		default:	// horizscale
 			{
 			gfx_display_lines = visheight;
@@ -465,6 +514,9 @@ logerror("video_scale %d\n",video_scale);
 
 	/* round to a multiple of 4 to avoid missing pixels on the right side */
 	gfx_display_columns  = (gfx_display_columns + 3) & ~3;
+
+	init_blit_data();
+
 }
 
 

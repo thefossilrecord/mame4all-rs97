@@ -19,7 +19,11 @@
 
 #define COMPATCORES 1
 
-char frontend_build_version[] = "RS-97 V1.2 (103)";
+#ifdef USE_DMA
+char frontend_build_version[] = "RS-97 V1.2(104D)";
+#else
+char frontend_build_version[] = "RS-97 V1.2 (104)";
+#endif
 
 static unsigned char splash_bmp[BMP_SIZE];
 static unsigned char menu_bmp[BMP_SIZE];
@@ -309,16 +313,16 @@ static int show_options(char *game)
 		switch (odx_video_aspect)
 		{
 			case 0: odx_gamelist_text_out_fmt(x_Pos,y_Pos,"Video Aspect   Normal"); break;
-			case 1: odx_gamelist_text_out_fmt(x_Pos,y_Pos,"Video Aspect   Scale Horizontal"); break;
-			case 2: odx_gamelist_text_out_fmt(x_Pos,y_Pos,"Video Aspect   Scale Best"); break;
+			case 1: odx_gamelist_text_out_fmt(x_Pos,y_Pos,"Video Aspect   Scale Aspect"); break;
+			case 2: odx_gamelist_text_out_fmt(x_Pos,y_Pos,"Video Aspect   Scale Aspect Fast"); break;
 			case 3: odx_gamelist_text_out_fmt(x_Pos,y_Pos,"Video Aspect   Scale Fast"); break;
-			case 4: odx_gamelist_text_out_fmt(x_Pos,y_Pos,"Video Aspect   Scale Halfsize"); break;
+			case 4: odx_gamelist_text_out_fmt(x_Pos,y_Pos,"Video Aspect   Full Screen"); break;
 			case 5: odx_gamelist_text_out_fmt(x_Pos,y_Pos,"Video Aspect   Rotate Normal"); break;
 			case 6: odx_gamelist_text_out_fmt(x_Pos,y_Pos,"Video Aspect   Rotate Scale Horiz"); break;
 			case 7: odx_gamelist_text_out_fmt(x_Pos,y_Pos,"Video Aspect   Rotate Best"); break;
 			case 8: odx_gamelist_text_out_fmt(x_Pos,y_Pos,"Video Aspect   Rotate Fast"); break;
 			case 9: odx_gamelist_text_out_fmt(x_Pos,y_Pos,"Video Aspect   Rotate Halfsize"); break;
-			case 10: odx_gamelist_text_out_fmt(x_Pos,y_Pos,"Video Aspect   Double Vertical"); break;			
+			case 10: odx_gamelist_text_out_fmt(x_Pos,y_Pos,"Video Aspect   Double Vertical"); break;
 		}
 		
 		/* (2) Video Sync */
@@ -547,7 +551,7 @@ void odx_load_config(void) {
 
 	f=fopen(curCfg,"r");
 	if (f) {
-		fscanf(f,"%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%s",&odx_freq,&odx_video_depth,&odx_video_aspect,&odx_video_sync,
+		fscanf(f,"%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%[^\n]s",&odx_freq,&odx_video_depth,&odx_video_aspect,&odx_video_sync,
 		&odx_frameskip,&odx_sound,&odx_clock_cpu,&odx_clock_sound,&odx_cpu_cores,&odx_ramtweaks,&last_game_selected,&odx_cheat,romdir);
 		fclose(f);
 	}
@@ -640,48 +644,81 @@ void execute_game (char *playemu, char *playgame)
 	//args[margc]=str[i]; i++; n++;
 
 	// odx_video_depth
-	if (odx_video_depth==8)
-	{
-		mame_args[margc]="-depth"; margc++;
-		mame_args[margc]="8"; margc++;
-	}
-	if (odx_video_depth==16)
-	{
+	//if (odx_video_depth==8)
+	//{
+	//	mame_args[margc]="-depth"; margc++;
+	//	mame_args[margc]="8"; margc++;
+	//}
+	//if (odx_video_depth==16)
+	//{
 		mame_args[margc]="-depth"; margc++;
 		mame_args[margc]="16"; margc++;
-	}
+	//}
 
 	// odx_video_aspect
-	if ((odx_video_aspect==1) || (odx_video_aspect==6))
-	{
-		mame_args[margc]="-horizscale"; margc++;
-		mame_args[margc]="-nodirty"; margc++;
-	}
-	if ((odx_video_aspect==2) || (odx_video_aspect==7))
-	{
-		mame_args[margc]="-bestscale"; margc++;
-		mame_args[margc]="-nodirty"; margc++;
-	}
-	if ((odx_video_aspect==3) || (odx_video_aspect==8))
-	{
-		mame_args[margc]="-fastscale"; margc++;
-		mame_args[margc]="-nodirty"; margc++;
-	}
-	if ((odx_video_aspect==4) || (odx_video_aspect==9))
-	{
-		mame_args[margc]="-halfscale"; margc++;
-		mame_args[margc]="-nodirty"; margc++;
-	}
+	switch(odx_video_aspect)
+		{
+		case 1:
+			{
+			// Scale aspect.
+			mame_args[margc]="-aspect"; margc++;
+			}
+			break;
+
+		case 2:
+			{
+			// Scale aspect fast.
+			mame_args[margc]="-fastaspect"; margc++;
+			}
+			break;
+
+		case 3:
+		case 8:
+			{
+			mame_args[margc]="-fastscale"; margc++;
+			}
+			break;
+
+		case 4:
+			{
+			mame_args[margc]="-fullscale"; margc++;
+			}
+			break;
+
+		case 6:
+			{
+			mame_args[margc]="-verticalscale"; margc++;
+			}
+			break;
+
+		case 7:
+			{
+			mame_args[margc]="-bestscale"; margc++;
+			}
+			break;
+
+		case 9:
+			{
+			mame_args[margc]="-halfscale"; margc++;
+			}
+			break;
+
+		case 10:
+			{
+			// Double vertical.
+			mame_args[margc]="-double"; margc++;
+			}
+			break;
+		}
+
+	mame_args[margc]="-nodirty"; margc++;
+
 	if ((odx_video_aspect>=5) && (odx_video_aspect<=9))
 	{
 		mame_args[margc]="-rotatecontrols"; margc++;
 		mame_args[margc]="-ror"; margc++;
 	}
-	if (odx_video_aspect==10)
-	{
-		mame_args[margc]="-double"; margc++;
-		mame_args[margc]="-nodirty"; margc++;
-	}
+
 	
 	// odx_video_sync
 	if (odx_video_sync==1)

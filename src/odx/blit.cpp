@@ -11,12 +11,21 @@ extern int gfx_display_lines;
 extern int gfx_display_columns;
 extern int gfx_width;
 extern int gfx_height;
+extern int x_aspect_lookup[];
+extern int y_aspect_lookup[];
+
 extern int skiplines;
 extern int skipcolumns;
 
+#ifdef USE_DMA
+#define SCREEN8 (unsigned short *)dma_pointer	//od_screen16
+#define SCREEN16 (unsigned short *)dma_pointer	//od_screen16
+#define FLIP_VIDEO { }
+#else
 #define SCREEN8 od_screen16
 #define SCREEN16 od_screen16
 #define FLIP_VIDEO odx_video_flip();
+#endif
 
 extern int video_scale;
 
@@ -77,6 +86,16 @@ UINT32 *palette_16bit_lookup;
 	} \
 }
 
+// int width=(bitmap->line[1] - bitmap->line[0])>>1;
+// unsigned short *lb = ((unsigned short*)(bitmap->line[skiplines])) + skipcolumns, *bitmap_line;
+// register unsigned short *address = SCREEN16 + gfx_xoffset + (gfx_yoffset * gfx_width)
+unsigned short *blit_dest = NULL;
+
+void init_blit_data()
+	{
+	blit_dest = SCREEN16 + gfx_xoffset + (gfx_yoffset * gfx_width);
+	}
+
 INLINE unsigned int mix_color16 (unsigned int color1, unsigned int color2)
 {
     return odx_video_color16((odx_video_getr16(color1)+odx_video_getr16(color2))>>1,(odx_video_getg16(color1)+odx_video_getg16(color2))>>1,(odx_video_getb16(color1)+odx_video_getb16(color2))>>1,0);
@@ -133,7 +152,7 @@ INLINE void blitscreen_dirty0_color8_noscale(struct osd_bitmap *bitmap)
 	unsigned char *lb = bitmap->line[skiplines] + skipcolumns;
 	register unsigned short *address = SCREEN8 + gfx_xoffset + (gfx_yoffset * gfx_width);
 
-	do
+    do
 	//for (y = 0; y < gfx_display_lines; y++)
 	{
 		BLIT_8_TO_16_32bit(address,lb,columns);
@@ -455,7 +474,7 @@ INLINE void blitscreen_dirty0_palettized16_doublevertical(struct osd_bitmap *bit
 	int width=(bitmap->line[1] - bitmap->line[0])>>1;
 	int columns=gfx_display_columns;
 	unsigned short *lb = ((unsigned short*)(bitmap->line[skiplines])) + skipcolumns;
-	register unsigned short *address = SCREEN16 + gfx_xoffset + (gfx_yoffset * gfx_width);
+	register unsigned short *address = blit_dest;
 
 	for (y = 0; y < gfx_display_lines; y++)
 	{
@@ -469,6 +488,100 @@ INLINE void blitscreen_dirty0_palettized16_doublevertical(struct osd_bitmap *bit
 			address[x] = palette_16bit_lookup[lb[x]];
 		}
 		lb+=width;
+		address+=gfx_width;
+	}
+}
+
+INLINE void blitscreen_dirty0_palettized16_aspect_fast(struct osd_bitmap *bitmap)
+{
+	int x,y;
+	int width=(bitmap->line[1] - bitmap->line[0])>>1;
+	int columns=gfx_display_columns;
+	unsigned short *lb = ((unsigned short*)(bitmap->line[skiplines])) + skipcolumns, *bitmap_line;
+	register unsigned short *address = blit_dest;
+
+	int source_line = 0;
+	bool copy_line = gfx_display_columns < gfx_width ? true : false;
+
+	for (y = 0; y < gfx_height; y++)
+	{
+		source_line = y_aspect_lookup[y];
+		bitmap_line = lb + (source_line * width);
+
+		if(copy_line)
+			{
+			for (x = 0; x < columns; x++)
+				{
+				address[x] = palette_16bit_lookup[bitmap_line[x]];
+				}
+			}
+		else
+			{
+			for (x = 0; x < gfx_width; x++)
+				address[x] = palette_16bit_lookup[bitmap_line[x_aspect_lookup[x]]];
+			}
+
+		address+=gfx_width;
+	}
+}
+
+INLINE void blitscreen_dirty0_palettized16_aspect(struct osd_bitmap *bitmap)
+{
+	int x,y;
+	int width=(bitmap->line[1] - bitmap->line[0])>>1;
+	int columns=gfx_display_columns;
+	unsigned short *lb = ((unsigned short*)(bitmap->line[skiplines])) + skipcolumns, *bitmap_line;
+	register unsigned short *address = blit_dest;
+
+	int source_line = 0, source_x;
+	bool copy_line = gfx_display_columns < gfx_width ? true : false;
+
+	for (y = 0; y < gfx_height; y++)
+	{
+		source_line = y_aspect_lookup[y];
+		bitmap_line = lb + (source_line * width);
+
+		if(copy_line)
+			{
+			for (x = 0; x < columns; x++)
+				{
+				address[x] = palette_16bit_lookup[bitmap_line[x]];
+				}
+			}
+		else
+			{
+			for (x = 0; x < gfx_width; x++)
+				{
+				source_x = x_aspect_lookup[x];
+				if(source_x)
+					address[x] = mix_color16(palette_16bit_lookup[bitmap_line[source_x]],
+							palette_16bit_lookup[bitmap_line[source_x - 1]]);
+				else
+					address[x] = palette_16bit_lookup[bitmap_line[source_x]];
+				}
+			}
+
+		address+=gfx_width;
+	}
+}
+
+INLINE void blitscreen_dirty0_palettized16_aspect_full(struct osd_bitmap *bitmap)
+{
+	int x,y;
+	int width=(bitmap->line[1] - bitmap->line[0])>>1;
+	unsigned short *lb = ((unsigned short*)(bitmap->line[skiplines])) + skipcolumns, *bitmap_line;
+	register unsigned short *address = blit_dest;
+
+	int source_line = 0;
+
+	for (y = 0; y < gfx_height; y++)
+	{
+		source_line = y_aspect_lookup[y];
+		bitmap_line = lb + (source_line * width);
+
+		for (x = 0; x < gfx_width; x++)
+			address[x] = palette_16bit_lookup[bitmap_line[x_aspect_lookup[x]]];
+
 		address+=gfx_width;
 	}
 }
@@ -653,32 +766,46 @@ INLINE void blitscreen_dirty0_palettized16_fitscale_merge1(struct osd_bitmap *bi
 void blitscreen_dirty0_palettized16(struct osd_bitmap *bitmap)
 {
 	if (SDL_MUSTLOCK(video)) SDL_LockSurface(video);
-	
-	if (video_scale == 1) /* Horizontal Only */
-	{
-		blitscreen_dirty0_palettized16_horzscale(bitmap);
-	}
-	else if (video_scale == 2) /* Half Scale */
-	{
-		blitscreen_dirty0_palettized16_halfscale(bitmap);
-	}
-	else if (video_scale == 3) /* Best Fit Scale */
-	{
-		blitscreen_dirty0_palettized16_fitscale_merge1(bitmap);
-	}
-	else if (video_scale == 4) /* Fast Fit Scale */
-	{
-		blitscreen_dirty0_palettized16_fitscale_merge0(bitmap);
-	}
-	else if(video_scale == 5) /* Double Vertical */
-	{
-		blitscreen_dirty0_palettized16_doublevertical(bitmap);
-	}
-	else
-	{
-		blitscreen_dirty0_palettized16_noscale(bitmap);
-	}
-	
+
+	switch(video_scale)
+		{
+		case 1:		// Horizontal Only
+			blitscreen_dirty0_palettized16_horzscale(bitmap);
+			break;
+
+		case 2:		// Half Scale
+			blitscreen_dirty0_palettized16_halfscale(bitmap);
+			break;
+
+		case 3:		// Best Fit Scale
+			blitscreen_dirty0_palettized16_fitscale_merge1(bitmap);
+			break;
+
+		case 4: 	// Fast Fit Scale
+			blitscreen_dirty0_palettized16_fitscale_merge0(bitmap);
+			break;
+
+		case 5:		// Double Vertical
+			blitscreen_dirty0_palettized16_doublevertical(bitmap);
+			break;
+
+		case 6:		// Scale aspect
+			blitscreen_dirty0_palettized16_aspect(bitmap);
+			break;
+
+		case 7:		// Scale aspect fast
+			blitscreen_dirty0_palettized16_aspect_fast(bitmap);
+			break;
+
+		case 8:
+			blitscreen_dirty0_palettized16_aspect_full(bitmap);
+			break;
+
+		default:
+			blitscreen_dirty0_palettized16_noscale(bitmap);
+			break;
+		}
+
 	if (SDL_MUSTLOCK(video)) SDL_UnlockSurface(video);
 	FLIP_VIDEO
 }
@@ -722,7 +849,7 @@ void blitscreen_dirty1_color16(struct osd_bitmap *bitmap)
 INLINE void blitscreen_dirty0_color16_noscale(struct osd_bitmap *bitmap)
 //void blitscreen_dirty0_color16(struct osd_bitmap *bitmap)
 {
-	int y=gfx_display_lines,x;
+	int y=gfx_display_lines;
 	int width=(bitmap->line[1] - bitmap->line[0])>>1;
 	int columns=gfx_display_columns<<1;
 	unsigned short *lb = ((unsigned short*)(bitmap->line[skiplines])) + skipcolumns;
@@ -742,11 +869,11 @@ INLINE void blitscreen_dirty0_color16_noscale(struct osd_bitmap *bitmap)
 INLINE void blitscreen_dirty0_color16_doublevertical(struct osd_bitmap *bitmap)
 //void blitscreen_dirty0_color16(struct osd_bitmap *bitmap)
 {
-	int y=gfx_display_lines,x;
+	int y=gfx_display_lines;
 	int width=(bitmap->line[1] - bitmap->line[0])>>1;
 	int columns=gfx_display_columns<<1;
 	unsigned short *lb = ((unsigned short*)(bitmap->line[skiplines])) + skipcolumns;
-	register unsigned short *address = SCREEN16 + gfx_xoffset + (gfx_yoffset * gfx_width);
+	register unsigned short *address = blit_dest;
 
 	do
 	{
@@ -759,6 +886,93 @@ INLINE void blitscreen_dirty0_color16_doublevertical(struct osd_bitmap *bitmap)
 	}
 	while (y);
 	//FLIP_VIDEO
+}
+
+INLINE void blitscreen_dirty0_color16_aspect_fast(struct osd_bitmap *bitmap)
+{
+	int y,x;
+	int width=(bitmap->line[1] - bitmap->line[0])>>1;
+	int columns=gfx_display_columns<<1;
+	unsigned short *lb = ((unsigned short*)(bitmap->line[skiplines])) + skipcolumns, *bitmap_line;
+	register unsigned short *address = blit_dest;
+
+	int source_line = 0;
+	bool copy_line = gfx_display_columns < gfx_width ? true : false;
+
+	for(y = 0; y < gfx_height; y ++)
+	{
+		source_line = y_aspect_lookup[y];
+		if(copy_line)
+			{
+			memcpy(address, lb + (source_line * width), columns);
+			}
+		else
+			{
+			bitmap_line = lb + (source_line * width);
+
+			for(x = 0; x < gfx_width; x++)
+				address[x] = bitmap_line[x_aspect_lookup[x]];
+			}
+		address+=gfx_width;
+	}
+}
+
+INLINE void blitscreen_dirty0_color16_aspect(struct osd_bitmap *bitmap)
+{
+	int y,x;
+	int width=(bitmap->line[1] - bitmap->line[0])>>1;
+	int columns=gfx_display_columns<<1;
+	unsigned short *lb = ((unsigned short*)(bitmap->line[skiplines])) + skipcolumns, *bitmap_line;
+	register unsigned short *address = blit_dest;
+
+	int source_line = 0,  source_x;
+	bool copy_line = gfx_display_columns < gfx_width ? true : false;
+
+	for(y = 0; y < gfx_height; y++)
+	{
+		source_line = y_aspect_lookup[y];
+		if(copy_line)
+			{
+			memcpy(address, lb + (source_line * width), columns);
+			}
+		else
+			{
+			bitmap_line = lb + (source_line * width);
+
+			for(x = 0; x < gfx_width; x++)
+				{
+				source_x = x_aspect_lookup[x];
+				if(source_x)
+					address[x] = mix_color16(bitmap_line[source_x],
+							bitmap_line[source_x - 1]);
+				else
+					address[x] = bitmap_line[source_x];
+				}
+			}
+		address+=gfx_width;
+	}
+}
+
+INLINE void blitscreen_dirty0_color16_aspect_full(struct osd_bitmap *bitmap)
+{
+	int x,y;
+	int width=(bitmap->line[1] - bitmap->line[0])>>1;
+
+	unsigned short *lb = ((unsigned short*)(bitmap->line[skiplines])) + skipcolumns, *bitmap_line;
+	register unsigned short *address = blit_dest;
+
+	int source_line = 0;
+
+	for (y = 0; y < gfx_height; y++)
+	{
+		source_line = y_aspect_lookup[y];
+		bitmap_line = lb + (source_line * width);
+
+		for(x = 0; x < gfx_width; x++)
+			address[x] = bitmap_line[x_aspect_lookup[x]];
+
+		address+=gfx_width;
+	}
 }
 
 INLINE void blitscreen_dirty0_color16_horzscale(struct osd_bitmap *bitmap)
@@ -795,8 +1009,8 @@ INLINE void blitscreen_dirty0_color16_horzscale(struct osd_bitmap *bitmap)
 				if (i) { *buffer_scr++=*buffer_mem++; }
 				else { *buffer_scr++=mix_color16(buffer_mem[0],buffer_mem[-1]); i=step; }
 				x--;
-			} while (x);						
-			buffer_mem+=buffer_mem_offset;		
+			} while (x);
+			buffer_mem+=buffer_mem_offset;
 			y--;
 		} while (y);
 	}
@@ -941,32 +1155,46 @@ INLINE void blitscreen_dirty0_color16_fitscale_merge1(struct osd_bitmap *bitmap)
 void blitscreen_dirty0_color16(struct osd_bitmap *bitmap)
 {
 	if (SDL_MUSTLOCK(video)) SDL_LockSurface(video);
-	
-	if (video_scale == 1) /* Horizontal Only */
-	{
-		blitscreen_dirty0_color16_horzscale(bitmap);
-	}
-	else if (video_scale == 2) /* Half Scale */
-	{
-		blitscreen_dirty0_color16_halfscale(bitmap);
-	}
-	else if (video_scale == 3) /* Best Fit Scale */
-	{
-		blitscreen_dirty0_color16_fitscale_merge1(bitmap);
-	}
-	else if (video_scale == 4) /* Fast Fit Scale */
-	{
-		blitscreen_dirty0_color16_fitscale_merge0(bitmap);
-	}
-	else if (video_scale == 5) /* Double Vertical */
-	{
-		blitscreen_dirty0_color16_doublevertical(bitmap);
-	}
-	else
-	{
-		blitscreen_dirty0_color16_noscale(bitmap);
-	}
-	
+
+	switch(video_scale)
+		{
+		case 1:		// Horizontal Only
+			blitscreen_dirty0_color16_horzscale(bitmap);
+			break;
+
+		case 2:		// Half Scale
+			blitscreen_dirty0_color16_halfscale(bitmap);
+			break;
+
+		case 3:		// Best Fit Scale
+			blitscreen_dirty0_color16_fitscale_merge1(bitmap);
+			break;
+
+		case 4: 	// Fast Fit Scale
+			blitscreen_dirty0_color16_fitscale_merge0(bitmap);
+			break;
+
+		case 5:		// Double Vertical
+			blitscreen_dirty0_color16_doublevertical(bitmap);
+			break;
+
+		case 6:		// Scale aspect
+			blitscreen_dirty0_color16_aspect(bitmap);
+			break;
+
+		case 7:		// Scale aspect fast
+			blitscreen_dirty0_color16_aspect_fast(bitmap);
+			break;
+
+		case 8:		// Full screen
+			blitscreen_dirty0_color16_aspect_full(bitmap);
+			break;
+
+		default:
+			blitscreen_dirty0_color16_noscale(bitmap);
+			break;
+		}
+
 	if (SDL_MUSTLOCK(video)) SDL_UnlockSurface(video);
 	FLIP_VIDEO
 }
