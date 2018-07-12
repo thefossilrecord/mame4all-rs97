@@ -188,6 +188,9 @@ static char *get_string (char *section, char *option, char *shortcut, char *def)
 		if ((strcasecmp(&mame_argv[i][1], option) == 0) ||
 			(shortcut && (strcasecmp(&mame_argv[i][1], shortcut)  == 0)))
 		{
+			if(strcasecmp(option, "cheat")==0)
+				return res;
+
 			i++;
 			if (i < mame_argc) res = mame_argv[i];
 #ifdef _GCW0_

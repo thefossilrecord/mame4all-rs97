@@ -167,6 +167,9 @@ static void updatekeyboard(void)
 
 	/* Snapshot*/
 	key[KEY_F12]=((ExKey1 & OD_L) && (ExKey1 & OD_B));
+
+	/* Service mode*/
+	key[KEY_F2]=((ExKey1 & OD_L) && (ExKey1 & OD_A));
 }
 
 int osd_is_key_pressed(int keycode)

@@ -19,11 +19,7 @@
 
 #define COMPATCORES 1
 
-#ifdef USE_DMA
-char frontend_build_version[] = "RS-97 V1.2(104D)";
-#else
-char frontend_build_version[] = "RS-97 V1.2 (104)";
-#endif
+char frontend_build_version[] = "RS-97 V1.2 (105)";
 
 static unsigned char splash_bmp[BMP_SIZE];
 static unsigned char menu_bmp[BMP_SIZE];
@@ -321,7 +317,7 @@ static int show_options(char *game)
 			case 6: odx_gamelist_text_out_fmt(x_Pos,y_Pos,"Video Aspect   Rotate Scale Horiz"); break;
 			case 7: odx_gamelist_text_out_fmt(x_Pos,y_Pos,"Video Aspect   Rotate Best"); break;
 			case 8: odx_gamelist_text_out_fmt(x_Pos,y_Pos,"Video Aspect   Rotate Fast"); break;
-			case 9: odx_gamelist_text_out_fmt(x_Pos,y_Pos,"Video Aspect   Rotate Halfsize"); break;
+			case 9: odx_gamelist_text_out_fmt(x_Pos,y_Pos,"Video Aspect   Double Scanlines"); break;
 			case 10: odx_gamelist_text_out_fmt(x_Pos,y_Pos,"Video Aspect   Double Vertical"); break;
 		}
 		
@@ -675,31 +671,31 @@ void execute_game (char *playemu, char *playgame)
 		case 3:
 		case 8:
 			{
-			mame_args[margc]="-fastscale"; margc++;
+			mame_args[margc]="-aspect"; margc++;
 			}
 			break;
 
 		case 4:
 			{
-			mame_args[margc]="-fullscale"; margc++;
+			mame_args[margc]="-fastaspect"; margc++;
 			}
 			break;
 
-		case 6:
-			{
-			mame_args[margc]="-verticalscale"; margc++;
-			}
-			break;
+//		case 6:
+//			{
+//			mame_args[margc]="-verticalscale"; margc++;
+//			}
+//			break;
 
 		case 7:
 			{
-			mame_args[margc]="-bestscale"; margc++;
+			mame_args[margc]="-aspect"; margc++;
 			}
 			break;
 
 		case 9:
 			{
-			mame_args[margc]="-halfscale"; margc++;
+			mame_args[margc]="-scandouble"; margc++;
 			}
 			break;
 
@@ -713,7 +709,7 @@ void execute_game (char *playemu, char *playgame)
 
 	mame_args[margc]="-nodirty"; margc++;
 
-	if ((odx_video_aspect>=5) && (odx_video_aspect<=9))
+	if ((odx_video_aspect>=5) && (odx_video_aspect<=8))
 	{
 		mame_args[margc]="-rotatecontrols"; margc++;
 		mame_args[margc]="-ror"; margc++;

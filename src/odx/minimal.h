@@ -96,4 +96,10 @@ extern int abs_x, abs_y, abs_z;
 #define odx_video_wait_vsync()  { }
 #define odx_video_setpalette()  { }
 
+#define USE_DMA
+
+#ifdef USE_DMA
+extern volatile uint16_t *dma_ptr;
+#endif
+
 #endif

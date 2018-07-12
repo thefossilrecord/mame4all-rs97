@@ -148,6 +148,8 @@ int main (int argc, char **argv)
 					video_scale=7;
 				if (strcasecmp(margv[i],"-fullscale") == 0)
 					video_scale=8;
+				if (strcasecmp(margv[i],"-scandouble") == 0)
+					video_scale=9;
 				if (strcasecmp(margv[i],"-border") == 0)
 					video_border=1;
 				if (strcasecmp(margv[i],"-aspect") == 0)

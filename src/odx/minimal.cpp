@@ -24,6 +24,10 @@
 
 #include "minimal.h"
 
+#ifdef USE_DMA
+#include "dma.h"
+#endif
+
 SDL_Event			event;
 unsigned char 			*keystates;
 
@@ -232,7 +236,7 @@ void odx_sound_thread_start(void)
     odx_audio_spec.freq = odx_sound_rate;
     odx_audio_spec.channels = odx_sound_stereo ? 2: 1;
 
-	odx_audio_buffer_len = 16384; //odx_audio_spec.samples * odx_audio_spec.channels * 2 * 64; 
+	odx_audio_buffer_len = odx_audio_spec.samples * odx_audio_spec.channels * 2 * 64;
 	void *audiobuf = malloc( odx_audio_buffer_len );
 	memset( audiobuf, 0 , odx_audio_buffer_len );
 	odx_audio_spec.userdata=audiobuf;
@@ -319,6 +323,10 @@ void odx_init(int ticks_per_second, int bpp, int rate, int bits, int stereo, int
     odx_audio_spec.userdata = NULL;
 
 	odx_set_video_mode(bpp,ODX_SCREEN_WIDTH,ODX_SCREEN_HEIGHT);
+
+#ifdef USE_DMA
+	init_dma();
+#endif
 }
 
 void odx_deinit(void)
@@ -336,6 +344,11 @@ void odx_deinit(void)
 	video=NULL;
 
 	SDL_QuitSubSystem(SDL_INIT_VIDEO|SDL_INIT_AUDIO);//|SDL_INIT_JOYSTICK);
+
+#ifdef USE_DMA
+	close_dma();
+#endif
+
 }
 
 void odx_set_clock(int mhz)

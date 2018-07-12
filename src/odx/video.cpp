@@ -395,6 +395,7 @@ logerror("video_scale %d\n",video_scale);
 			break;
 
 		case 5:		// double vertical
+		case 9:		// double scanlines
 			{
 			if(visheight * 2 > gfx_height)
 				visheight = gfx_height / 2;
